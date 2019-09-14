@@ -1,5 +1,5 @@
 {
-    "name": "@qae/crypto",
+    "name": "@arkecosystem/crypto",
     "version": "2.5.24",
     "description": "Crypto utilities for the ARK Blockchain",
     "license": "MIT",
