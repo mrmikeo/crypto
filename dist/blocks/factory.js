@@ -32,15 +32,15 @@ class BlockFactory {
         }
         return this.fromData(data);
     }
-    static fromData(data) {
+    static fromData(data, options = {}) {
         data = block_1.Block.applySchema(data);
         const serialized = block_1.Block.serializeWithTransactions(data).toString("hex");
-        const block = new block_1.Block({ ...deserializer_1.deserializer.deserialize(serialized), id: data.id });
+        const block = new block_1.Block({ ...deserializer_1.Deserializer.deserialize(serialized, false, options), id: data.id });
         block.serialized = serialized;
         return block;
     }
     static fromSerialized(serialized) {
-        const deserialized = deserializer_1.deserializer.deserialize(serialized);
+        const deserialized = deserializer_1.Deserializer.deserialize(serialized);
         deserialized.data = block_1.Block.applySchema(deserialized.data);
         const block = new block_1.Block(deserialized);
         block.serialized = serialized;

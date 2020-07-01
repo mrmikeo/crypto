@@ -78,13 +78,29 @@ export declare const testnet: {
                 "vote": number;
                 "multiSignature": number;
                 "ipfs": number;
-                "timelockTransfer": number;
                 "multiPayment": number;
                 "delegateResignation": number;
+                "htlcLock": number;
+                "htlcClaim": number;
+                "htlcRefund": number;
             };
         };
         "vendorFieldLength": number;
+        "multiPaymentLimit": number;
+        "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
+    } | {
+        "height": number;
         "aip11": boolean;
+        "htlcEnabled": boolean;
+        "reward"?: undefined;
+        "activeDelegates"?: undefined;
+        "blocktime"?: undefined;
+        "block"?: undefined;
+        "epoch"?: undefined;
+        "fees"?: undefined;
+        "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
     } | {
         "height": number;
         "reward": number;
@@ -94,7 +110,9 @@ export declare const testnet: {
         "epoch"?: undefined;
         "fees"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
         "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     } | {
         "height": number;
         "vendorFieldLength": number;
@@ -104,7 +122,9 @@ export declare const testnet: {
         "block"?: undefined;
         "epoch"?: undefined;
         "fees"?: undefined;
+        "multiPaymentLimit"?: undefined;
         "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     } | {
         "height": number;
         "block": {
@@ -119,7 +139,9 @@ export declare const testnet: {
         "epoch"?: undefined;
         "fees"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
         "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     })[];
     network: {
         "name": string;

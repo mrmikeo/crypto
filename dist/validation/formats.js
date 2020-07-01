@@ -11,18 +11,15 @@ const vendorField = (ajv) => {
         }
     });
 };
-const vendorFieldHex = (ajv) => {
-    ajv.addFormat("vendorFieldHex", data => {
+const validPeer = (ajv) => {
+    ajv.addFormat("peer", (ip) => {
         try {
-            if (/^[0123456789A-Fa-f]+$/.test(data)) {
-                return Buffer.from(data, "hex").length <= utils_1.maxVendorFieldLength();
-            }
+            return utils_1.isValidPeer({ ip }, false);
         }
         catch (_a) {
             return false;
         }
-        return false;
     });
 };
-exports.formats = [vendorField, vendorFieldHex];
+exports.formats = [vendorField, validPeer];
 //# sourceMappingURL=formats.js.map

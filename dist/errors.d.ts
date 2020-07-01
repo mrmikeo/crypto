@@ -25,11 +25,14 @@ export declare class PrivateKeyLengthError extends CryptoError {
 export declare class PublicKeyError extends CryptoError {
     constructor(given: string);
 }
+export declare class AddressNetworkError extends CryptoError {
+    constructor(what: string);
+}
 export declare class TransactionTypeError extends CryptoError {
     constructor(given: string);
 }
-export declare class MalformedTransactionBytesError extends CryptoError {
-    constructor();
+export declare class InvalidTransactionBytesError extends CryptoError {
+    constructor(message: string);
 }
 export declare class TransactionSchemaError extends CryptoError {
     constructor(what: string);
@@ -38,19 +41,28 @@ export declare class TransactionVersionError extends CryptoError {
     constructor(given: number);
 }
 export declare class UnkownTransactionError extends CryptoError {
-    constructor(given: number);
+    constructor(given: string);
 }
 export declare class TransactionAlreadyRegisteredError extends CryptoError {
     constructor(name: string);
 }
-export declare class TransactionTypeInvalidRangeError extends CryptoError {
-    constructor(given: number);
+export declare class TransactionKeyAlreadyRegisteredError extends CryptoError {
+    constructor(name: string);
+}
+export declare class CoreTransactionTypeGroupImmutableError extends CryptoError {
+    constructor();
 }
 export declare class MissingMilestoneFeeError extends CryptoError {
     constructor(name: string);
 }
 export declare class MaximumPaymentCountExceededError extends CryptoError {
-    constructor(given: number);
+    constructor(limit: number);
+}
+export declare class MinimumPaymentCountSubceededError extends CryptoError {
+    constructor();
+}
+export declare class VendorFieldLengthExceededError extends CryptoError {
+    constructor(limit: number);
 }
 export declare class MissingTransactionSignatureError extends CryptoError {
     constructor();
@@ -65,5 +77,8 @@ export declare class InvalidMilestoneConfigurationError extends CryptoError {
     constructor(message: string);
 }
 export declare class InvalidMultiSignatureAssetError extends CryptoError {
+    constructor();
+}
+export declare class DuplicateParticipantInMultiSignatureError extends CryptoError {
     constructor();
 }

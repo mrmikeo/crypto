@@ -11,7 +11,6 @@ export declare class Serializer {
      * Serializes the given transaction prior to AIP11 (legacy).
      */
     private static getBytesV1;
-    private static getBytesV2;
     private static serializeCommon;
     private static serializeVendorField;
     private static serializeSignatures;

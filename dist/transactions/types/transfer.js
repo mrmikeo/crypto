@@ -10,10 +10,10 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const bs58check_1 = __importDefault(require("bs58check"));
 const bytebuffer_1 = __importDefault(require("bytebuffer"));
 const enums_1 = require("../../enums");
-const utils_1 = require("../../utils");
+const identities_1 = require("../../identities");
+const bignum_1 = require("../../utils/bignum");
 const schemas = __importStar(require("./schemas"));
 const transaction_1 = require("./transaction");
 class TransferTransaction extends transaction_1.Transaction {
@@ -26,18 +26,24 @@ class TransferTransaction extends transaction_1.Transaction {
     serialize(options) {
         const { data } = this;
         const buffer = new bytebuffer_1.default(24, true);
-        buffer.writeUint64(+data.amount);
+        // @ts-ignore - The ByteBuffer types say we can't use strings but the code actually handles them.
+        buffer.writeUint64(data.amount.toString());
         buffer.writeUint32(data.expiration || 0);
-        buffer.append(bs58check_1.default.decode(data.recipientId));
+        const { addressBuffer, addressError } = identities_1.Address.toBuffer(data.recipientId);
+        options.addressError = addressError;
+        buffer.append(addressBuffer);
         return buffer;
     }
     deserialize(buf) {
         const { data } = this;
-        data.amount = utils_1.BigNumber.make(buf.readUint64().toString());
+        data.amount = bignum_1.BigNumber.make(buf.readUint64().toString());
         data.expiration = buf.readUint32();
-        data.recipientId = bs58check_1.default.encode(buf.readBytes(21).toBuffer());
+        data.recipientId = identities_1.Address.fromBuffer(buf.readBytes(21).toBuffer());
     }
 }
-TransferTransaction.type = enums_1.TransactionTypes.Transfer;
 exports.TransferTransaction = TransferTransaction;
+TransferTransaction.typeGroup = enums_1.TransactionTypeGroup.Core;
+TransferTransaction.type = enums_1.TransactionType.Transfer;
+TransferTransaction.key = "transfer";
+TransferTransaction.defaultStaticFee = bignum_1.BigNumber.make("10000000");
 //# sourceMappingURL=transfer.js.map

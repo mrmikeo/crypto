@@ -3,12 +3,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const assert_1 = __importDefault(require("assert"));
 const bytebuffer_1 = __importDefault(require("bytebuffer"));
 const errors_1 = require("../errors");
 const config_1 = require("../managers/config");
 const transactions_1 = require("../transactions");
 const block_1 = require("./block");
 class Serializer {
+    static size(block) {
+        let size = this.headerSize(block.data) + block.data.blockSignature.length / 2;
+        for (const transaction of block.transactions) {
+            size += 4 /* tx length */ + transaction.serialized.length;
+        }
+        return size;
+    }
     static serializeWithTransactions(block) {
         const transactions = block.transactions || [];
         block.numberOfTransactions = block.numberOfTransactions || transactions.length;
@@ -31,6 +39,20 @@ class Serializer {
         }
         return buffer.flip().toBuffer();
     }
+    static headerSize(block) {
+        const constants = config_1.configManager.getMilestone(block.height - 1 || 1);
+        return 4 + // version
+            4 + // timestamp
+            4 + // height
+            (constants.block.idFullSha256 ? 32 : 8) + // previousBlock
+            4 + // numberOfTransactions
+            8 + // totalAmount
+            8 + // totalFee
+            8 + // reward
+            4 + // payloadLength
+            block.payloadHash.length / 2 +
+            block.generatorPublicKey.length / 2;
+    }
     static serializeHeader(block, buffer) {
         const constants = config_1.configManager.getMilestone(block.height - 1 || 1);
         if (constants.block.idFullSha256) {
@@ -47,12 +69,16 @@ class Serializer {
         buffer.writeUint32(block.height);
         buffer.append(block.previousBlockHex, "hex");
         buffer.writeUint32(block.numberOfTransactions);
-        buffer.writeUint64(+block.totalAmount.toFixed());
-        buffer.writeUint64(+block.totalFee.toFixed());
-        buffer.writeUint64(+block.reward.toFixed());
+        // @ts-ignore - The ByteBuffer types say we can't use strings but the code actually handles them.
+        buffer.writeUint64(block.totalAmount.toString());
+        // @ts-ignore - The ByteBuffer types say we can't use strings but the code actually handles them.
+        buffer.writeUint64(block.totalFee.toString());
+        // @ts-ignore - The ByteBuffer types say we can't use strings but the code actually handles them.
+        buffer.writeUint64(block.reward.toString());
         buffer.writeUint32(block.payloadLength);
         buffer.append(block.payloadHash, "hex");
         buffer.append(block.generatorPublicKey, "hex");
+        assert_1.default.strictEqual(buffer.offset, this.headerSize(block));
     }
     static serializeSignature(block, buffer) {
         if (block.blockSignature) {

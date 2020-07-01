@@ -1,11 +1,11 @@
 import { IBlockData, ITransaction } from "../interfaces";
-declare class Deserializer {
-    deserialize(serializedHex: string, headerOnly?: boolean): {
+export declare class Deserializer {
+    static deserialize(serializedHex: string, headerOnly?: boolean, options?: {
+        deserializeTransactionsUnchecked?: boolean;
+    }): {
         data: IBlockData;
         transactions: ITransaction[];
     };
-    private deserializeHeader;
-    private deserializeTransactions;
+    private static deserializeHeader;
+    private static deserializeTransactions;
 }
-export declare const deserializer: Deserializer;
-export {};

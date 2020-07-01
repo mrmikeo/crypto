@@ -64,18 +64,24 @@ class PublicKeyError extends CryptoError {
     }
 }
 exports.PublicKeyError = PublicKeyError;
+class AddressNetworkError extends CryptoError {
+    constructor(what) {
+        super(what);
+    }
+}
+exports.AddressNetworkError = AddressNetworkError;
 class TransactionTypeError extends CryptoError {
     constructor(given) {
         super(`Type ${given} not supported.`);
     }
 }
 exports.TransactionTypeError = TransactionTypeError;
-class MalformedTransactionBytesError extends CryptoError {
-    constructor() {
-        super(`Failed to deserialize transaction, because the bytes are malformed.`);
+class InvalidTransactionBytesError extends CryptoError {
+    constructor(message) {
+        super(`Failed to deserialize transaction, encountered invalid bytes: ${message}`);
     }
 }
-exports.MalformedTransactionBytesError = MalformedTransactionBytesError;
+exports.InvalidTransactionBytesError = InvalidTransactionBytesError;
 class TransactionSchemaError extends CryptoError {
     constructor(what) {
         super(what);
@@ -90,7 +96,7 @@ class TransactionVersionError extends CryptoError {
 exports.TransactionVersionError = TransactionVersionError;
 class UnkownTransactionError extends CryptoError {
     constructor(given) {
-        super(`Transaction type ${given} is not registered.`);
+        super(`Unknown transaction type: ${given}`);
     }
 }
 exports.UnkownTransactionError = UnkownTransactionError;
@@ -100,12 +106,18 @@ class TransactionAlreadyRegisteredError extends CryptoError {
     }
 }
 exports.TransactionAlreadyRegisteredError = TransactionAlreadyRegisteredError;
-class TransactionTypeInvalidRangeError extends CryptoError {
-    constructor(given) {
-        super(`Custom transaction type must be in the range 100-255 (${given}).`);
+class TransactionKeyAlreadyRegisteredError extends CryptoError {
+    constructor(name) {
+        super(`Transaction key ${name} is already registered.`);
     }
 }
-exports.TransactionTypeInvalidRangeError = TransactionTypeInvalidRangeError;
+exports.TransactionKeyAlreadyRegisteredError = TransactionKeyAlreadyRegisteredError;
+class CoreTransactionTypeGroupImmutableError extends CryptoError {
+    constructor() {
+        super(`The Core transaction type group is immutable.`);
+    }
+}
+exports.CoreTransactionTypeGroupImmutableError = CoreTransactionTypeGroupImmutableError;
 class MissingMilestoneFeeError extends CryptoError {
     constructor(name) {
         super(`Missing milestone fee for '${name}'.`);
@@ -113,11 +125,23 @@ class MissingMilestoneFeeError extends CryptoError {
 }
 exports.MissingMilestoneFeeError = MissingMilestoneFeeError;
 class MaximumPaymentCountExceededError extends CryptoError {
-    constructor(given) {
-        super(`Expected a maximum of 2258 payments, but got ${given}.`);
+    constructor(limit) {
+        super(`Number of payments exceeded the allowed maximum of ${limit}.`);
     }
 }
 exports.MaximumPaymentCountExceededError = MaximumPaymentCountExceededError;
+class MinimumPaymentCountSubceededError extends CryptoError {
+    constructor() {
+        super(`Number of payments subceeded the required minimum of 2.`);
+    }
+}
+exports.MinimumPaymentCountSubceededError = MinimumPaymentCountSubceededError;
+class VendorFieldLengthExceededError extends CryptoError {
+    constructor(limit) {
+        super(`Length of vendor field exceeded the allowed maximum ${limit}.`);
+    }
+}
+exports.VendorFieldLengthExceededError = VendorFieldLengthExceededError;
 class MissingTransactionSignatureError extends CryptoError {
     constructor() {
         super(`Expected the transaction to be signed.`);
@@ -150,4 +174,10 @@ class InvalidMultiSignatureAssetError extends CryptoError {
     }
 }
 exports.InvalidMultiSignatureAssetError = InvalidMultiSignatureAssetError;
+class DuplicateParticipantInMultiSignatureError extends CryptoError {
+    constructor() {
+        super(`Invalid multi signature, because duplicate participant found.`);
+    }
+}
+exports.DuplicateParticipantInMultiSignatureError = DuplicateParticipantInMultiSignatureError;
 //# sourceMappingURL=errors.js.map

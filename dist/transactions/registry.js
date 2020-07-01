@@ -1,70 +1,53 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-const lodash_camelcase_1 = __importDefault(require("lodash.camelcase"));
+const enums_1 = require("../enums");
 const errors_1 = require("../errors");
-const managers_1 = require("../managers");
-const fee_1 = require("../managers/fee");
 const validation_1 = require("../validation");
 const types_1 = require("./types");
+const internal_transaction_type_1 = require("./types/internal-transaction-type");
 class TransactionRegistry {
     constructor() {
-        this.coreTypes = new Map();
-        this.customTypes = new Map();
-        types_1.TransactionTypeFactory.initialize(this.coreTypes, this.customTypes);
-        this.registerCoreType(types_1.TransferTransaction);
-        this.registerCoreType(types_1.SecondSignatureRegistrationTransaction);
-        this.registerCoreType(types_1.DelegateRegistrationTransaction);
-        this.registerCoreType(types_1.VoteTransaction);
-        this.registerCoreType(types_1.MultiSignatureRegistrationTransaction);
-        this.registerCoreType(types_1.IpfsTransaction);
-        this.registerCoreType(types_1.TimelockTransferTransaction);
-        this.registerCoreType(types_1.MultiPaymentTransaction);
-        this.registerCoreType(types_1.DelegateResignationTransaction);
+        this.transactionTypes = new Map();
+        types_1.TransactionTypeFactory.initialize(this.transactionTypes);
+        this.registerTransactionType(types_1.TransferTransaction);
+        this.registerTransactionType(types_1.SecondSignatureRegistrationTransaction);
+        this.registerTransactionType(types_1.DelegateRegistrationTransaction);
+        this.registerTransactionType(types_1.VoteTransaction);
+        this.registerTransactionType(types_1.MultiSignatureRegistrationTransaction);
+        this.registerTransactionType(types_1.IpfsTransaction);
+        this.registerTransactionType(types_1.MultiPaymentTransaction);
+        this.registerTransactionType(types_1.DelegateResignationTransaction);
+        this.registerTransactionType(types_1.HtlcLockTransaction);
+        this.registerTransactionType(types_1.HtlcClaimTransaction);
+        this.registerTransactionType(types_1.HtlcRefundTransaction);
+        // registering multisignature legacy schema separate after splitting the main
+        // multisignature schema into current implementation and legacy
+        validation_1.validator.extendTransaction(types_1.schemas.multiSignatureLegacy, false);
     }
-    registerCustomType(constructor) {
-        const { type } = constructor;
-        if (this.customTypes.has(type)) {
+    registerTransactionType(constructor) {
+        const { typeGroup, type } = constructor;
+        const internalType = internal_transaction_type_1.InternalTransactionType.from(type, typeGroup);
+        if (this.transactionTypes.has(internalType)) {
             throw new errors_1.TransactionAlreadyRegisteredError(constructor.name);
         }
-        if (type < 100) {
-            throw new errors_1.TransactionTypeInvalidRangeError(type);
+        if (Array.from(this.transactionTypes.values()).some(({ key }) => key === constructor.key)) {
+            throw new errors_1.TransactionKeyAlreadyRegisteredError(constructor.key);
         }
-        this.customTypes.set(type, constructor);
+        this.transactionTypes.set(internalType, constructor);
         this.updateSchemas(constructor);
-        this.updateStaticFees();
     }
-    deregisterCustomType(type) {
-        if (this.customTypes.has(type)) {
-            const schema = this.customTypes.get(type);
-            this.updateSchemas(schema, true);
-            this.customTypes.delete(type);
+    deregisterTransactionType(constructor) {
+        const { typeGroup, type } = constructor;
+        const internalType = internal_transaction_type_1.InternalTransactionType.from(type, typeGroup);
+        if (!this.transactionTypes.has(internalType)) {
+            throw new errors_1.UnkownTransactionError(internalType.toString());
         }
-    }
-    updateStaticFees(height) {
-        const customConstructors = Array.from(this.customTypes.values());
-        const milestone = managers_1.configManager.getMilestone(height);
-        const { staticFees } = milestone.fees;
-        for (const constructor of customConstructors) {
-            const { type, name } = constructor;
-            if (milestone.fees && milestone.fees.staticFees) {
-                const value = staticFees[lodash_camelcase_1.default(name.replace("Transaction", ""))];
-                if (!value) {
-                    throw new errors_1.MissingMilestoneFeeError(name);
-                }
-                fee_1.feeManager.set(type, value);
-            }
+        if (typeGroup === enums_1.TransactionTypeGroup.Core) {
+            throw new errors_1.CoreTransactionTypeGroupImmutableError();
         }
-    }
-    registerCoreType(constructor) {
-        const { type } = constructor;
-        if (this.coreTypes.has(type)) {
-            throw new errors_1.TransactionAlreadyRegisteredError(constructor.name);
-        }
-        this.coreTypes.set(type, constructor);
-        this.updateSchemas(constructor);
+        const schema = this.transactionTypes.get(internalType);
+        this.updateSchemas(schema, true);
+        this.transactionTypes.delete(internalType);
     }
     updateSchemas(transaction, remove) {
         validation_1.validator.extendTransaction(transaction.getSchema(), remove);

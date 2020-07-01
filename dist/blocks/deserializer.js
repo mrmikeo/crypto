@@ -9,7 +9,7 @@ const transactions_1 = require("../transactions");
 const utils_1 = require("../utils");
 const block_1 = require("./block");
 class Deserializer {
-    deserialize(serializedHex, headerOnly = false) {
+    static deserialize(serializedHex, headerOnly = false, options = {}) {
         const block = {};
         let transactions = [];
         const buffer = Buffer.from(serializedHex, "hex");
@@ -19,7 +19,7 @@ class Deserializer {
         this.deserializeHeader(block, buf);
         headerOnly = headerOnly || buf.remaining() === 0;
         if (!headerOnly) {
-            transactions = this.deserializeTransactions(block, buf);
+            transactions = this.deserializeTransactions(block, buf, options.deserializeTransactionsUnchecked);
         }
         block.idHex = block_1.Block.getIdHex(block);
         block.id = block_1.Block.getId(block);
@@ -37,7 +37,7 @@ class Deserializer {
         }
         return { data: block, transactions };
     }
-    deserializeHeader(block, buf) {
+    static deserializeHeader(block, buf) {
         block.version = buf.readUint32();
         block.timestamp = buf.readUint32();
         block.height = buf.readUint32();
@@ -48,7 +48,7 @@ class Deserializer {
         }
         else {
             block.previousBlockHex = buf.readBytes(8).toString("hex");
-            block.previousBlock = utils_1.BigNumber.make(block.previousBlockHex, 16).toFixed();
+            block.previousBlock = utils_1.BigNumber.make(`0x${block.previousBlockHex}`).toString();
         }
         block.numberOfTransactions = buf.readUint32();
         block.totalAmount = utils_1.BigNumber.make(buf.readUint64().toString());
@@ -68,7 +68,7 @@ class Deserializer {
         };
         block.blockSignature = buf.readBytes(signatureLength()).toString("hex");
     }
-    deserializeTransactions(block, buf) {
+    static deserializeTransactions(block, buf, deserializeTransactionsUnchecked = false) {
         const transactionLengths = [];
         for (let i = 0; i < block.numberOfTransactions; i++) {
             transactionLengths.push(buf.readUint32());
@@ -77,12 +77,14 @@ class Deserializer {
         block.transactions = [];
         for (const length of transactionLengths) {
             const transactionBytes = buf.readBytes(length).toBuffer();
-            const transaction = transactions_1.TransactionFactory.fromBytes(transactionBytes);
+            const transaction = deserializeTransactionsUnchecked
+                ? transactions_1.TransactionFactory.fromBytesUnsafe(transactionBytes)
+                : transactions_1.TransactionFactory.fromBytes(transactionBytes);
             transactions.push(transaction);
             block.transactions.push(transaction.data);
         }
         return transactions;
     }
 }
-exports.deserializer = new Deserializer();
+exports.Deserializer = Deserializer;
 //# sourceMappingURL=deserializer.js.map

@@ -67,14 +67,20 @@ export declare const devnet: {
                 "vote": number;
                 "multiSignature": number;
                 "ipfs": number;
-                "timelockTransfer": number;
                 "multiPayment": number;
                 "delegateResignation": number;
+                "htlcLock": number;
+                "htlcClaim": number;
+                "htlcRefund": number;
             };
         };
         "ignoreInvalidSecondSignatureField": boolean;
         "ignoreExpiredTransactions": boolean;
         "vendorFieldLength": number;
+        "multiPaymentLimit": number;
+        "p2p"?: undefined;
+        "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     } | {
         "height": number;
         "reward": number;
@@ -86,6 +92,10 @@ export declare const devnet: {
         "ignoreInvalidSecondSignatureField"?: undefined;
         "ignoreExpiredTransactions"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "p2p"?: undefined;
+        "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     } | {
         "height": number;
         "block": {
@@ -103,6 +113,10 @@ export declare const devnet: {
         "ignoreInvalidSecondSignatureField"?: undefined;
         "ignoreExpiredTransactions"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "p2p"?: undefined;
+        "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     } | {
         "height": number;
         "ignoreInvalidSecondSignatureField": boolean;
@@ -114,6 +128,10 @@ export declare const devnet: {
         "fees"?: undefined;
         "ignoreExpiredTransactions"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "p2p"?: undefined;
+        "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     } | {
         "height": number;
         "vendorFieldLength": number;
@@ -125,6 +143,10 @@ export declare const devnet: {
         "fees"?: undefined;
         "ignoreInvalidSecondSignatureField"?: undefined;
         "ignoreExpiredTransactions"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "p2p"?: undefined;
+        "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     } | {
         "height": number;
         "block": {
@@ -142,6 +164,10 @@ export declare const devnet: {
         "ignoreInvalidSecondSignatureField"?: undefined;
         "ignoreExpiredTransactions"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "p2p"?: undefined;
+        "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     } | {
         "height": number;
         "ignoreExpiredTransactions": boolean;
@@ -153,6 +179,10 @@ export declare const devnet: {
         "fees"?: undefined;
         "ignoreInvalidSecondSignatureField"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "p2p"?: undefined;
+        "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     } | {
         "height": number;
         "block": {
@@ -170,6 +200,44 @@ export declare const devnet: {
         "ignoreInvalidSecondSignatureField"?: undefined;
         "ignoreExpiredTransactions"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "p2p"?: undefined;
+        "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
+    } | {
+        "height": number;
+        "p2p": {
+            "minimumVersions": string[];
+        };
+        "reward"?: undefined;
+        "activeDelegates"?: undefined;
+        "blocktime"?: undefined;
+        "block"?: undefined;
+        "epoch"?: undefined;
+        "fees"?: undefined;
+        "ignoreInvalidSecondSignatureField"?: undefined;
+        "ignoreExpiredTransactions"?: undefined;
+        "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
+    } | {
+        "height": number;
+        "aip11": boolean;
+        "htlcEnabled": boolean;
+        "p2p": {
+            "minimumVersions": string[];
+        };
+        "reward"?: undefined;
+        "activeDelegates"?: undefined;
+        "blocktime"?: undefined;
+        "block"?: undefined;
+        "epoch"?: undefined;
+        "fees"?: undefined;
+        "ignoreInvalidSecondSignatureField"?: undefined;
+        "ignoreExpiredTransactions"?: undefined;
+        "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
     })[];
     network: {
         "name": string;

@@ -1,15 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const enums_1 = require("../../../enums");
-const managers_1 = require("../../../managers");
 const utils_1 = require("../../../utils");
+const types_1 = require("../../types");
 const transaction_1 = require("./transaction");
 class DelegateResignationBuilder extends transaction_1.TransactionBuilder {
     constructor() {
         super();
-        this.data.type = enums_1.TransactionTypes.DelegateResignation;
+        this.data.type = types_1.DelegateResignationTransaction.type;
+        this.data.typeGroup = types_1.DelegateResignationTransaction.typeGroup;
         this.data.version = 2;
-        this.data.fee = managers_1.feeManager.get(enums_1.TransactionTypes.DelegateResignation);
+        this.data.fee = types_1.DelegateResignationTransaction.staticFee();
         this.data.amount = utils_1.BigNumber.ZERO;
         this.data.senderPublicKey = undefined;
     }

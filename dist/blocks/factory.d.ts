@@ -5,6 +5,8 @@ export declare class BlockFactory {
     static fromHex(hex: string): IBlock;
     static fromBytes(buffer: Buffer): IBlock;
     static fromJson(json: IBlockJson): IBlock;
-    static fromData(data: IBlockData): IBlock;
+    static fromData(data: IBlockData, options?: {
+        deserializeTransactionsUnchecked?: boolean;
+    }): IBlock;
     private static fromSerialized;
 }

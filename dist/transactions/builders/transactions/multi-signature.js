@@ -1,13 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const enums_1 = require("../../../enums");
-const managers_1 = require("../../../managers");
 const utils_1 = require("../../../utils");
+const types_1 = require("../../types");
 const transaction_1 = require("./transaction");
 class MultiSignatureBuilder extends transaction_1.TransactionBuilder {
     constructor() {
         super();
-        this.data.type = enums_1.TransactionTypes.MultiSignature;
+        this.data.type = types_1.MultiSignatureRegistrationTransaction.type;
+        this.data.typeGroup = types_1.MultiSignatureRegistrationTransaction.typeGroup;
         this.data.version = 2;
         this.data.fee = utils_1.BigNumber.ZERO;
         this.data.amount = utils_1.BigNumber.ZERO;
@@ -19,7 +19,7 @@ class MultiSignatureBuilder extends transaction_1.TransactionBuilder {
         const { publicKeys } = this.data.asset.multiSignature;
         if (publicKeys.length <= 16) {
             publicKeys.push(publicKey);
-            this.data.fee = managers_1.feeManager.getForTransaction(this.data);
+            this.data.fee = types_1.MultiSignatureRegistrationTransaction.staticFee({ data: this.data });
         }
         return this;
     }
@@ -29,7 +29,7 @@ class MultiSignatureBuilder extends transaction_1.TransactionBuilder {
     }
     multiSignatureAsset(multiSignature) {
         this.data.asset.multiSignature = multiSignature;
-        this.data.fee = managers_1.feeManager.getForTransaction(this.data);
+        this.data.fee = types_1.MultiSignatureRegistrationTransaction.staticFee({ data: this.data });
         return this;
     }
     getStruct() {

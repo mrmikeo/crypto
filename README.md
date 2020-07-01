@@ -19,4 +19,3 @@ This project exists thanks to all the people who [contribute](../../../../contri
 ## License
 
 [MIT](LICENSE) © [ARK Ecosystem](https://ark.io)
-# crypto

@@ -7,7 +7,7 @@ class Signer {
     static sign(transaction, keys, options) {
         options = options || { excludeSignature: true, excludeSecondSignature: true };
         const hash = utils_2.Utils.toHash(transaction, options);
-        const signature = transaction.version === 2 ? crypto_1.Hash.signSchnorr(hash, keys) : crypto_1.Hash.signECDSA(hash, keys);
+        const signature = transaction.version > 1 ? crypto_1.Hash.signSchnorr(hash, keys) : crypto_1.Hash.signECDSA(hash, keys);
         if (!transaction.signature && !options.excludeMultiSignature) {
             transaction.signature = signature;
         }
@@ -15,7 +15,7 @@ class Signer {
     }
     static secondSign(transaction, keys) {
         const hash = utils_2.Utils.toHash(transaction, { excludeSecondSignature: true });
-        const signature = transaction.version === 2 ? crypto_1.Hash.signSchnorr(hash, keys) : crypto_1.Hash.signECDSA(hash, keys);
+        const signature = transaction.version > 1 ? crypto_1.Hash.signSchnorr(hash, keys) : crypto_1.Hash.signECDSA(hash, keys);
         if (!transaction.secondSignature) {
             transaction.secondSignature = signature;
         }

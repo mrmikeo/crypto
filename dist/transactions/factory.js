@@ -24,13 +24,14 @@ class TransactionFactory {
      */
     static fromBytesUnsafe(buffer, id) {
         try {
-            const transaction = deserializer_1.deserializer.deserialize(buffer);
-            transaction.data.id = id || utils_2.Utils.getId(transaction.data);
+            const options = { acceptLegacyVersion: true };
+            const transaction = deserializer_1.Deserializer.deserialize(buffer, options);
+            transaction.data.id = id || utils_2.Utils.getId(transaction.data, options);
             transaction.isVerified = true;
             return transaction;
         }
         catch (error) {
-            throw new errors_1.MalformedTransactionBytesError();
+            throw new errors_1.InvalidTransactionBytesError(error.message);
         }
     }
     static fromJson(json) {
@@ -46,15 +47,15 @@ class TransactionFactory {
         }
         const transaction = types_1.TransactionTypeFactory.create(value);
         const { version } = transaction.data;
-        if (!version || version === 1) {
-            deserializer_1.deserializer.applyV1Compatibility(transaction.data);
+        if (version === 1) {
+            deserializer_1.Deserializer.applyV1Compatibility(transaction.data);
         }
         serializer_1.Serializer.serialize(transaction);
         return this.fromBytes(transaction.serialized, strict);
     }
     static fromSerialized(serialized, strict = true) {
         try {
-            const transaction = deserializer_1.deserializer.deserialize(serialized);
+            const transaction = deserializer_1.Deserializer.deserialize(serialized);
             transaction.data.id = utils_2.Utils.getId(transaction.data);
             const { value, error } = verifier_1.Verifier.verifySchema(transaction.data, strict);
             if (error && !utils_1.isException(value)) {
@@ -64,10 +65,12 @@ class TransactionFactory {
             return transaction;
         }
         catch (error) {
-            if (error instanceof errors_1.TransactionVersionError || error instanceof errors_1.TransactionSchemaError) {
+            if (error instanceof errors_1.TransactionVersionError ||
+                error instanceof errors_1.TransactionSchemaError ||
+                error instanceof errors_1.DuplicateParticipantInMultiSignatureError) {
                 throw error;
             }
-            throw new errors_1.MalformedTransactionBytesError();
+            throw new errors_1.InvalidTransactionBytesError(error.message);
         }
     }
 }

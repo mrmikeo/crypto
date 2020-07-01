@@ -1,24 +1,23 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const errors_1 = require("../../errors");
+const internal_transaction_type_1 = require("./internal-transaction-type");
 class TransactionTypeFactory {
-    static initialize(coreTypes, customTypes) {
-        this.coreTypes = coreTypes;
-        this.customTypes = customTypes;
+    static initialize(transactionTypes) {
+        this.transactionTypes = transactionTypes;
     }
     static create(data) {
-        const instance = new (this.get(data.type))();
+        const instance = new (this.get(data.type, data.typeGroup))();
         instance.data = data;
+        instance.data.version = data.version || 1;
         return instance;
     }
-    static get(type) {
-        if (this.coreTypes.has(type)) {
-            return this.coreTypes.get(type);
+    static get(type, typeGroup) {
+        const internalType = internal_transaction_type_1.InternalTransactionType.from(type, typeGroup);
+        if (this.transactionTypes.has(internalType)) {
+            return this.transactionTypes.get(internalType);
         }
-        if (this.customTypes.has(type)) {
-            return this.customTypes.get(type);
-        }
-        throw new errors_1.UnkownTransactionError(type);
+        throw new errors_1.UnkownTransactionError(internalType.toString());
     }
 }
 exports.TransactionTypeFactory = TransactionTypeFactory;

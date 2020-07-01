@@ -42,6 +42,6 @@ class HDWallet {
         return this.deriveSlip44(root).deriveHardened(managers_1.configManager.get("network.aip20") || 1);
     }
 }
-HDWallet.slip44 = 111;
 exports.HDWallet = HDWallet;
+HDWallet.slip44 = 111;
 //# sourceMappingURL=hdwallet.js.map

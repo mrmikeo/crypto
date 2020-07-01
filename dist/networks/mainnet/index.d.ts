@@ -3,15 +3,19 @@ export declare const mainnet: {
         "blocks": string[];
         "transactions": string[];
         "outlookTable": {
-        "3f8a34fd496e7656c25ec8c0b8fbbbd75780e4c1546ff366a3bb4e1786c2930f": string;
-        "b361f800a7f87533ff8f73d9f02f1b3287c58f9f1e2ff78dd6ece6a6fcad59cc": string;
-        "ac1b13f9068f44c1d9132693c58dfa2f0f370e92fcd5bb8ec8f0329ae2bd681e": string;
-        "789b77ffe053b298b6e99dfc23753aeb6317a84fbc159cbae2b46903d188ff06": string;
-        "0870ce6b2e9f9c0553c07870f11092c14e2c6bce2568a4c7a89c6754e877c1d4": string;
+            "5139199631254983076": string;
         };
         "transactionIdFixTable": {
+            "ca764c01dd78f93393b02f7f6c4f0c12ed8e7ca26d3098e91d6e461a238a6b33": string;
         };
         "wrongTransactionOrder": {
+            "11773170219525190460": string[];
+            "5847703302374058501": string[];
+        };
+        "negativeBalances": {
+            "03d0102c85624e5bdfef4a82faea7badded8bc0dc5e087bd71d75bb534641404a1": {
+                "8": string;
+            };
         };
     };
     genesisBlock: {
@@ -78,12 +82,16 @@ export declare const mainnet: {
                 "vote": number;
                 "multiSignature": number;
                 "ipfs": number;
-                "timelockTransfer": number;
                 "multiPayment": number;
                 "delegateResignation": number;
+                "htlcLock": number;
+                "htlcClaim": number;
+                "htlcRefund": number;
             };
         };
         "vendorFieldLength": number;
+        "multiPaymentLimit": number;
+        "aip11"?: undefined;
     } | {
         "height": number;
         "reward": number;
@@ -93,6 +101,8 @@ export declare const mainnet: {
         "epoch"?: undefined;
         "fees"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "aip11"?: undefined;
     } | {
         "height": number;
         "block": {
@@ -108,6 +118,8 @@ export declare const mainnet: {
         "epoch"?: undefined;
         "fees"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "aip11"?: undefined;
     } | {
         "height": number;
         "vendorFieldLength": number;
@@ -117,6 +129,8 @@ export declare const mainnet: {
         "block"?: undefined;
         "epoch"?: undefined;
         "fees"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "aip11"?: undefined;
     } | {
         "height": number;
         "block": {
@@ -132,6 +146,8 @@ export declare const mainnet: {
         "epoch"?: undefined;
         "fees"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "aip11"?: undefined;
     } | {
         "height": number;
         "block": {
@@ -147,6 +163,19 @@ export declare const mainnet: {
         "epoch"?: undefined;
         "fees"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
+        "aip11"?: undefined;
+    } | {
+        "height": number;
+        "aip11": boolean;
+        "reward"?: undefined;
+        "activeDelegates"?: undefined;
+        "blocktime"?: undefined;
+        "block"?: undefined;
+        "epoch"?: undefined;
+        "fees"?: undefined;
+        "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
     })[];
     network: {
         "name": string;

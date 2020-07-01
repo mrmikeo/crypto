@@ -12,6 +12,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const bytebuffer_1 = __importDefault(require("bytebuffer"));
 const enums_1 = require("../../enums");
+const bignum_1 = require("../../utils/bignum");
 const schemas = __importStar(require("./schemas"));
 const transaction_1 = require("./transaction");
 class VoteTransaction extends transaction_1.Transaction {
@@ -37,6 +38,9 @@ class VoteTransaction extends transaction_1.Transaction {
         }
     }
 }
-VoteTransaction.type = enums_1.TransactionTypes.Vote;
 exports.VoteTransaction = VoteTransaction;
+VoteTransaction.typeGroup = enums_1.TransactionTypeGroup.Core;
+VoteTransaction.type = enums_1.TransactionType.Vote;
+VoteTransaction.key = "vote";
+VoteTransaction.defaultStaticFee = bignum_1.BigNumber.make("100000000");
 //# sourceMappingURL=vote.js.map

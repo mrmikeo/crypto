@@ -8,16 +8,60 @@ const validation_1 = require("../validation");
 const deserializer_1 = require("./deserializer");
 const serializer_1 = require("./serializer");
 class Block {
-    static applySchema(data) {
-        const { value, error } = validation_1.validator.validate("block", data);
-        if (error &&
-            !(utils_1.isException(value) || data.transactions.some((transaction) => utils_1.isException(transaction)))) {
-            throw new errors_1.BlockSchemaError(data.height, error);
+    constructor({ data, transactions, id }) {
+        this.data = data;
+        // TODO genesis block calculated id is wrong for some reason
+        if (this.data.height === 1) {
+            this.applyGenesisBlockFix(id || data.id);
         }
-        return value;
+        // fix on real timestamp, this is overloading transaction
+        // timestamp with block timestamp for storage only
+        // also add sequence to keep database sequence
+        this.transactions = transactions.map((transaction, index) => {
+            transaction.data.blockId = this.data.id;
+            transaction.timestamp = this.data.timestamp;
+            transaction.data.sequence = index;
+            return transaction;
+        });
+        delete this.data.transactions;
+        this.verification = this.verify();
+        // Order of transactions messed up in mainnet V1
+        const { wrongTransactionOrder } = config_1.configManager.get("exceptions");
+        if (wrongTransactionOrder && wrongTransactionOrder[this.data.id]) {
+            const fixedOrderIds = wrongTransactionOrder[this.data.id];
+            this.transactions = fixedOrderIds.map((id) => this.transactions.find(transaction => transaction.id === id));
+        }
+    }
+    static applySchema(data) {
+        let result = validation_1.validator.validate("block", data);
+        if (!result.error) {
+            return result.value;
+        }
+        result = validation_1.validator.validateException("block", data);
+        for (const err of result.errors) {
+            let fatal = false;
+            const match = err.dataPath.match(/\.transactions\[([0-9]+)\]/);
+            if (match === null) {
+                if (!utils_1.isException(data)) {
+                    fatal = true;
+                }
+            }
+            else {
+                const txIndex = match[1];
+                const tx = data.transactions[txIndex];
+                if (tx.id === undefined || !utils_1.isException(tx)) {
+                    fatal = true;
+                }
+            }
+            if (fatal) {
+                throw new errors_1.BlockSchemaError(data.height, `Invalid data${err.dataPath ? " at " + err.dataPath : ""}: ` +
+                    `${err.message}: ${JSON.stringify(err.data)}`);
+            }
+        }
+        return result.value;
     }
     static deserialize(hexString, headerOnly = false) {
-        return deserializer_1.deserializer.deserialize(hexString, headerOnly).data;
+        return deserializer_1.Deserializer.deserialize(hexString, headerOnly).data;
     }
     static serializeWithTransactions(block) {
         return serializer_1.Serializer.serializeWithTransactions(block);
@@ -45,31 +89,7 @@ class Block {
     static getId(data) {
         const constants = config_1.configManager.getMilestone(data.height);
         const idHex = Block.getIdHex(data);
-        return constants.block.idFullSha256 ? idHex : utils_1.BigNumber.make(idHex, 16).toFixed();
-    }
-    constructor({ data, transactions, id }) {
-        this.data = data;
-        // TODO genesis block calculated id is wrong for some reason
-        if (this.data.height === 1) {
-            this.applyGenesisBlockFix(id || data.id);
-        }
-        // fix on real timestamp, this is overloading transaction
-        // timestamp with block timestamp for storage only
-        // also add sequence to keep database sequence
-        this.transactions = transactions.map((transaction, index) => {
-            transaction.data.blockId = this.data.id;
-            transaction.timestamp = this.data.timestamp;
-            transaction.data.sequence = index;
-            return transaction;
-        });
-        delete this.data.transactions;
-        this.verification = this.verify();
-        // Order of transactions messed up in mainnet V1
-        const { wrongTransactionOrder } = config_1.configManager.get("exceptions");
-        if (wrongTransactionOrder && wrongTransactionOrder[this.data.id]) {
-            const fixedOrderIds = wrongTransactionOrder[this.data.id];
-            this.transactions = fixedOrderIds.map((id) => this.transactions.find(transaction => transaction.id === id));
-        }
+        return constants.block.idFullSha256 ? idHex : utils_1.BigNumber.make(`0x${idHex}`).toString();
     }
     getHeader() {
         const header = Object.assign({}, this.data);
@@ -83,9 +103,9 @@ class Block {
     }
     toJson() {
         const data = JSON.parse(JSON.stringify(this.data));
-        data.reward = this.data.reward.toFixed();
-        data.totalAmount = this.data.totalAmount.toFixed();
-        data.totalFee = this.data.totalFee.toFixed();
+        data.reward = this.data.reward.toString();
+        data.totalAmount = this.data.totalAmount.toString();
+        data.totalFee = this.data.totalFee.toString();
         data.transactions = this.transactions.map(transaction => transaction.toJson());
         return data;
     }
@@ -116,7 +136,13 @@ class Block {
             if (crypto_1.Slots.getSlotNumber(block.timestamp) > crypto_1.Slots.getSlotNumber()) {
                 result.errors.push("Invalid block timestamp");
             }
-            let size = 0;
+            const serializedBuffer = Block.serializeWithTransactions({
+                ...block,
+                transactions: this.transactions.map(tx => tx.data),
+            });
+            if (serializedBuffer.byteLength > constants.block.maxPayload) {
+                result.errors.push(`Payload is too large: ${serializedBuffer.byteLength} > ${constants.block.maxPayload}`);
+            }
             const invalidTransactions = this.transactions.filter(tx => !tx.verified);
             if (invalidTransactions.length > 0) {
                 result.errors.push("One or more transactions are not verified:");
@@ -161,7 +187,6 @@ class Block {
                 appliedTransactions[transaction.data.id] = transaction.data;
                 totalAmount = totalAmount.plus(transaction.data.amount);
                 totalFee = totalFee.plus(transaction.data.fee);
-                size += bytes.length;
                 payloadBuffers.push(bytes);
             }
             if (!totalAmount.isEqualTo(block.totalAmount)) {
@@ -169,9 +194,6 @@ class Block {
             }
             if (!totalFee.isEqualTo(block.totalFee)) {
                 result.errors.push("Invalid total fee");
-            }
-            if (size > constants.block.maxPayload) {
-                result.errors.push("Payload is too large");
             }
             if (crypto_1.HashAlgorithms.sha256(payloadBuffers).toString("hex") !== block.payloadHash) {
                 result.errors.push("Invalid payload hash");

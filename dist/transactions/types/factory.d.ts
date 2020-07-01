@@ -1,10 +1,9 @@
 import { TransactionConstructor } from "..";
-import { TransactionTypes } from "../../enums";
 import { ITransaction, ITransactionData } from "../../interfaces";
+import { InternalTransactionType } from "./internal-transaction-type";
 export declare class TransactionTypeFactory {
-    static initialize(coreTypes: Map<TransactionTypes, TransactionConstructor>, customTypes: Map<TransactionTypes, TransactionConstructor>): void;
+    static initialize(transactionTypes: Map<InternalTransactionType, TransactionConstructor>): void;
     static create(data: ITransactionData): ITransaction;
-    static get(type: TransactionTypes | number): TransactionConstructor;
-    private static coreTypes;
-    private static customTypes;
+    static get(type: number, typeGroup?: number): TransactionConstructor;
+    private static transactionTypes;
 }

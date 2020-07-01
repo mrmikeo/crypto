@@ -1,26 +1,28 @@
 "use strict";
-/* tslint:disable:no-shadowed-variable */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const bs58check_1 = __importDefault(require("bs58check"));
+/* tslint:disable:no-shadowed-variable */
 const bytebuffer_1 = __importDefault(require("bytebuffer"));
 const __1 = require("..");
 const enums_1 = require("../enums");
 const errors_1 = require("../errors");
 const identities_1 = require("../identities");
-const managers_1 = require("../managers");
+const config_1 = require("../managers/config");
+const utils_1 = require("../utils");
 const types_1 = require("./types");
 // Reference: https://github.com/ArkEcosystem/AIPs/blob/master/AIPS/aip-11.md
 class Serializer {
-    static getBytes(transaction, options) {
+    static getBytes(transaction, options = {}) {
         const version = transaction.version || 1;
-        if (version === 1) {
-            return this.getBytesV1(transaction, options);
-        }
-        else if (version === 2 && managers_1.configManager.getMilestone().aip11) {
-            return this.getBytesV2(transaction, options);
+        if (options.acceptLegacyVersion || utils_1.isSupportedTransactionVersion(version)) {
+            if (version === 1) {
+                return this.getBytesV1(transaction, options);
+            }
+            else {
+                return this.serialize(types_1.TransactionTypeFactory.create(transaction), options);
+            }
         }
         else {
             throw new errors_1.TransactionVersionError(version);
@@ -47,7 +49,7 @@ class Serializer {
         let assetSize = 0;
         let assetBytes;
         switch (transaction.type) {
-            case enums_1.TransactionTypes.SecondSignature: {
+            case enums_1.TransactionType.SecondSignature: {
                 const { signature } = transaction.asset;
                 const bb = new bytebuffer_1.default(33, true);
                 const publicKeyBuffer = Buffer.from(signature.publicKey, "hex");
@@ -59,19 +61,19 @@ class Serializer {
                 assetSize = assetBytes.length;
                 break;
             }
-            case enums_1.TransactionTypes.DelegateRegistration: {
+            case enums_1.TransactionType.DelegateRegistration: {
                 assetBytes = Buffer.from(transaction.asset.delegate.username, "utf8");
                 assetSize = assetBytes.length;
                 break;
             }
-            case enums_1.TransactionTypes.Vote: {
+            case enums_1.TransactionType.Vote: {
                 if (transaction.asset.votes) {
                     assetBytes = Buffer.from(transaction.asset.votes.join(""), "utf8");
                     assetSize = assetBytes.length;
                 }
                 break;
             }
-            case enums_1.TransactionTypes.MultiSignature: {
+            case enums_1.TransactionType.MultiSignature: {
                 const keysgroupBuffer = Buffer.from(transaction.asset.multiSignatureLegacy.keysgroup.join(""), "utf8");
                 const bb = new bytebuffer_1.default(1 + 1 + keysgroupBuffer.length, true);
                 bb.writeByte(transaction.asset.multiSignatureLegacy.min);
@@ -94,11 +96,11 @@ class Serializer {
         }
         // Apply fix for broken type 1 and 4 transactions, which were
         // erroneously calculated with a recipient id.
-        const { transactionIdFixTable } = managers_1.configManager.get("exceptions");
+        const { transactionIdFixTable } = config_1.configManager.get("exceptions");
         const isBrokenTransaction = transactionIdFixTable && Object.values(transactionIdFixTable).includes(transaction.id);
         if (isBrokenTransaction || (transaction.recipientId && transaction.type !== 1 && transaction.type !== 4)) {
             const recipientId = transaction.recipientId || identities_1.Address.fromPublicKey(transaction.senderPublicKey, transaction.network);
-            const recipient = bs58check_1.default.decode(recipientId);
+            const recipient = identities_1.Address.toBuffer(recipientId).addressBuffer;
             for (const byte of recipient) {
                 bb.writeByte(byte);
             }
@@ -108,17 +110,7 @@ class Serializer {
                 bb.writeByte(0);
             }
         }
-        if (transaction.vendorFieldHex) {
-            const vf = Buffer.from(transaction.vendorFieldHex, "hex");
-            const fillstart = vf.length;
-            for (let i = 0; i < fillstart; i++) {
-                bb.writeByte(vf[i]);
-            }
-            for (let i = fillstart; i < 64; i++) {
-                bb.writeByte(0);
-            }
-        }
-        else if (transaction.vendorField) {
+        if (transaction.vendorField) {
             const vf = Buffer.from(transaction.vendorField);
             const fillstart = vf.length;
             for (let i = 0; i < fillstart; i++) {
@@ -133,8 +125,10 @@ class Serializer {
                 bb.writeByte(0);
             }
         }
-        bb.writeInt64(+transaction.amount.toFixed());
-        bb.writeInt64(+transaction.fee.toFixed());
+        // @ts-ignore - The ByteBuffer types say we can't use strings but the code actually handles them.
+        bb.writeInt64(transaction.amount.toString());
+        // @ts-ignore - The ByteBuffer types say we can't use strings but the code actually handles them.
+        bb.writeInt64(transaction.fee.toString());
         if (assetSize > 0) {
             for (let i = 0; i < assetSize; i++) {
                 bb.writeByte(assetBytes[i]);
@@ -160,17 +154,27 @@ class Serializer {
         }
         return Buffer.from(buffer);
     }
-    static getBytesV2(transaction, options = {}) {
-        return this.serialize(types_1.TransactionTypeFactory.create(transaction), options);
-    }
     static serializeCommon(transaction, buffer) {
-        buffer.writeByte(0xff); // fill, to disambiguate from v1
-        buffer.writeByte(transaction.version || 0x01); // version
-        buffer.writeByte(transaction.network || managers_1.configManager.get("network.pubKeyHash")); // ark = 0x17, devnet = 0x30
-        buffer.writeByte(transaction.type);
-        buffer.writeUint32(transaction.timestamp);
+        transaction.version = transaction.version || 0x01;
+        if (transaction.typeGroup === undefined) {
+            transaction.typeGroup = enums_1.TransactionTypeGroup.Core;
+        }
+        buffer.writeByte(0xff);
+        buffer.writeByte(transaction.version);
+        buffer.writeByte(transaction.network || config_1.configManager.get("network.pubKeyHash"));
+        if (transaction.version === 1) {
+            buffer.writeByte(transaction.type);
+            buffer.writeUint32(transaction.timestamp);
+        }
+        else {
+            buffer.writeUint32(transaction.typeGroup);
+            buffer.writeUint16(transaction.type);
+            // @ts-ignore - The ByteBuffer types say we can't use strings but the code actually handles them.
+            buffer.writeUint64(transaction.nonce.toString());
+        }
         buffer.append(transaction.senderPublicKey, "hex");
-        buffer.writeUint64(+transaction.fee);
+        // @ts-ignore - The ByteBuffer types say we can't use strings but the code actually handles them.
+        buffer.writeUint64(transaction.fee.toString());
     }
     static serializeVendorField(transaction, buffer) {
         if (transaction.hasVendorField()) {
@@ -179,10 +183,6 @@ class Serializer {
                 const vf = Buffer.from(data.vendorField, "utf8");
                 buffer.writeByte(vf.length);
                 buffer.append(vf);
-            }
-            else if (data.vendorFieldHex) {
-                buffer.writeByte(data.vendorFieldHex.length / 2);
-                buffer.append(data.vendorFieldHex, "hex");
             }
             else {
                 buffer.writeByte(0x00);

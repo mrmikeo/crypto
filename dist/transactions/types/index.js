@@ -17,10 +17,13 @@ __export(require("./delegate-registration"));
 __export(require("./vote"));
 __export(require("./multi-signature"));
 __export(require("./ipfs"));
-__export(require("./timelock-transfer"));
 __export(require("./multi-payment"));
 __export(require("./delegate-resignation"));
+__export(require("./htlc-lock"));
+__export(require("./htlc-claim"));
+__export(require("./htlc-refund"));
 __export(require("./factory"));
+__export(require("./internal-transaction-type"));
 const schemas = __importStar(require("./schemas"));
 exports.schemas = schemas;
 //# sourceMappingURL=index.js.map

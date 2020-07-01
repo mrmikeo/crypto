@@ -1,13 +1,10 @@
 import { Transaction } from "./types";
 export declare type TransactionConstructor = typeof Transaction;
 declare class TransactionRegistry {
-    private readonly coreTypes;
-    private readonly customTypes;
+    private readonly transactionTypes;
     constructor();
-    registerCustomType(constructor: TransactionConstructor): void;
-    deregisterCustomType(type: number): void;
-    updateStaticFees(height?: number): void;
-    private registerCoreType;
+    registerTransactionType(constructor: TransactionConstructor): void;
+    deregisterTransactionType(constructor: TransactionConstructor): void;
     private updateSchemas;
 }
 export declare const transactionRegistry: TransactionRegistry;

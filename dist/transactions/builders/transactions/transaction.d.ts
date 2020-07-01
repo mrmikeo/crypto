@@ -5,6 +5,8 @@ export declare abstract class TransactionBuilder<TBuilder extends TransactionBui
     constructor();
     build(data?: Partial<ITransactionData>): ITransaction;
     version(version: number): TBuilder;
+    typeGroup(typeGroup: number): TBuilder;
+    nonce(nonce: string): TBuilder;
     network(network: number): TBuilder;
     fee(fee: string): TBuilder;
     amount(amount: string): TBuilder;
@@ -16,8 +18,12 @@ export declare abstract class TransactionBuilder<TBuilder extends TransactionBui
     secondSign(secondPassphrase: string): TBuilder;
     secondSignWithWif(wif: string, networkWif?: number): TBuilder;
     multiSign(passphrase: string, index: number): TBuilder;
+    multiSignWithWif(index: number, wif: string, networkWif?: number): TBuilder;
     verify(): boolean;
     getStruct(): ITransactionData;
     protected abstract instance(): TBuilder;
+    private signWithKeyPair;
+    private secondSignWithKeyPair;
+    private multiSignWithKeyPair;
     private getSigningObject;
 }

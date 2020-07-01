@@ -36,17 +36,10 @@ export declare const schemas: {
             minLength: number;
             maxLength: number;
             $ref?: undefined;
-            addressOnNetwork?: undefined;
         } | {
             $ref: string;
             minLength?: undefined;
             maxLength?: undefined;
-            addressOnNetwork?: undefined;
-        } | {
-            addressOnNetwork: boolean;
-            minLength?: undefined;
-            maxLength?: undefined;
-            $ref?: undefined;
         })[];
     };
     publicKey: {
@@ -100,6 +93,32 @@ export declare const schemas: {
             pattern?: undefined;
             minLength?: undefined;
             maxLength?: undefined;
+        })[];
+    };
+    genericName: {
+        $id: string;
+        allOf: ({
+            type: string;
+            pattern: string;
+            minLength?: undefined;
+            maxLength?: undefined;
+        } | {
+            minLength: number;
+            maxLength: number;
+            type?: undefined;
+            pattern?: undefined;
+        })[];
+    };
+    uri: {
+        $id: string;
+        allOf: ({
+            format: string;
+            minLength?: undefined;
+            maxLength?: undefined;
+        } | {
+            minLength: number;
+            maxLength: number;
+            format?: undefined;
         })[];
     };
     blockHeader: {

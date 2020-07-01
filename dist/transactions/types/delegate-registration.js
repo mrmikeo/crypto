@@ -12,6 +12,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const bytebuffer_1 = __importDefault(require("bytebuffer"));
 const enums_1 = require("../../enums");
+const bignum_1 = require("../../utils/bignum");
 const schemas = __importStar(require("./schemas"));
 const transaction_1 = require("./transaction");
 class DelegateRegistrationTransaction extends transaction_1.Transaction {
@@ -36,6 +37,9 @@ class DelegateRegistrationTransaction extends transaction_1.Transaction {
         };
     }
 }
-DelegateRegistrationTransaction.type = enums_1.TransactionTypes.DelegateRegistration;
 exports.DelegateRegistrationTransaction = DelegateRegistrationTransaction;
+DelegateRegistrationTransaction.typeGroup = enums_1.TransactionTypeGroup.Core;
+DelegateRegistrationTransaction.type = enums_1.TransactionType.DelegateRegistration;
+DelegateRegistrationTransaction.key = "delegateRegistration";
+DelegateRegistrationTransaction.defaultStaticFee = bignum_1.BigNumber.make("2500000000");
 //# sourceMappingURL=delegate-registration.js.map

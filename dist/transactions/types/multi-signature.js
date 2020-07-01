@@ -12,11 +12,30 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const bytebuffer_1 = __importDefault(require("bytebuffer"));
 const enums_1 = require("../../enums");
+const managers_1 = require("../../managers");
+const utils_1 = require("../../utils");
+const bignum_1 = require("../../utils/bignum");
 const schemas = __importStar(require("./schemas"));
 const transaction_1 = require("./transaction");
 class MultiSignatureRegistrationTransaction extends transaction_1.Transaction {
     static getSchema() {
         return schemas.multiSignature;
+    }
+    static staticFee(feeContext = {}) {
+        const staticFee = super.staticFee(feeContext);
+        const data = feeContext.data;
+        if (data) {
+            if (data.version === 2) {
+                return staticFee.times(data.asset.multiSignature.publicKeys.length + 1);
+            }
+            else {
+                return staticFee.times(data.asset.multiSignatureLegacy.keysgroup.length + 1);
+            }
+        }
+        return staticFee;
+    }
+    verify() {
+        return utils_1.isException(this.data) || (managers_1.configManager.getMilestone().aip11 && super.verify());
     }
     serialize(options) {
         const { data } = this;
@@ -70,6 +89,9 @@ class MultiSignatureRegistrationTransaction extends transaction_1.Transaction {
         }
     }
 }
-MultiSignatureRegistrationTransaction.type = enums_1.TransactionTypes.MultiSignature;
 exports.MultiSignatureRegistrationTransaction = MultiSignatureRegistrationTransaction;
+MultiSignatureRegistrationTransaction.typeGroup = enums_1.TransactionTypeGroup.Core;
+MultiSignatureRegistrationTransaction.type = enums_1.TransactionType.MultiSignature;
+MultiSignatureRegistrationTransaction.key = "multiSignature";
+MultiSignatureRegistrationTransaction.defaultStaticFee = bignum_1.BigNumber.make("500000000");
 //# sourceMappingURL=multi-signature.js.map

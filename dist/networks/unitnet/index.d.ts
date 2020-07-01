@@ -86,13 +86,17 @@ export declare const unitnet: {
                 "vote": number;
                 "multiSignature": number;
                 "ipfs": number;
-                "timelockTransfer": number;
                 "multiPayment": number;
                 "delegateResignation": number;
+                "htlcLock": number;
+                "htlcClaim": number;
+                "htlcRefund": number;
             };
         };
         "vendorFieldLength": number;
+        "multiPaymentLimit": number;
         "aip11": boolean;
+        "htlcEnabled": boolean;
     } | {
         "height": number;
         "reward": number;
@@ -102,7 +106,9 @@ export declare const unitnet: {
         "epoch"?: undefined;
         "fees"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
         "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     } | {
         "height": number;
         "vendorFieldLength": number;
@@ -112,7 +118,9 @@ export declare const unitnet: {
         "block"?: undefined;
         "epoch"?: undefined;
         "fees"?: undefined;
+        "multiPaymentLimit"?: undefined;
         "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     } | {
         "height": number;
         "block": {
@@ -127,7 +135,9 @@ export declare const unitnet: {
         "epoch"?: undefined;
         "fees"?: undefined;
         "vendorFieldLength"?: undefined;
+        "multiPaymentLimit"?: undefined;
         "aip11"?: undefined;
+        "htlcEnabled"?: undefined;
     })[];
     network: {
         "name": string;

@@ -11,13 +11,10 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const deepmerge_1 = __importDefault(require("deepmerge"));
-const lodash_camelcase_1 = __importDefault(require("lodash.camelcase"));
 const lodash_get_1 = __importDefault(require("lodash.get"));
 const lodash_set_1 = __importDefault(require("lodash.set"));
-const enums_1 = require("../enums");
 const errors_1 = require("../errors");
 const networks = __importStar(require("../networks"));
-const fee_1 = require("./fee");
 class ConfigManager {
     constructor() {
         this.setConfig(networks.devnet);
@@ -31,7 +28,6 @@ class ConfigManager {
         };
         this.validateMilestones();
         this.buildConstants();
-        this.buildFees();
     }
     setFromPreset(network) {
         this.setConfig(this.getPreset(network));
@@ -50,13 +46,13 @@ class ConfigManager {
     }
     setHeight(value) {
         this.height = value;
-        this.buildFees();
     }
     getHeight() {
         return this.height;
     }
-    isNewMilestone() {
-        return this.milestones.map(milestone => milestone.height).includes(this.height);
+    isNewMilestone(height) {
+        height = height || this.height;
+        return this.milestones.some(milestone => milestone.height === height);
     }
     getMilestone(height) {
         if (!height && this.height) {
@@ -86,8 +82,11 @@ class ConfigManager {
             data: this.milestones[0],
         };
         let lastMerged = 0;
+        const overwriteMerge = (dest, source, options) => source;
         while (lastMerged < this.milestones.length - 1) {
-            this.milestones[lastMerged + 1] = deepmerge_1.default(this.milestones[lastMerged], this.milestones[lastMerged + 1]);
+            this.milestones[lastMerged + 1] = deepmerge_1.default(this.milestones[lastMerged], this.milestones[lastMerged + 1], {
+                arrayMerge: overwriteMerge,
+            });
             lastMerged++;
         }
     }
@@ -104,11 +103,6 @@ class ConfigManager {
             if ((current.height - previous.height) % previous.activeDelegates !== 0) {
                 throw new errors_1.InvalidMilestoneConfigurationError(`Bad milestone at height: ${current.height}. The number of delegates can only be changed at the beginning of a new round.`);
             }
-        }
-    }
-    buildFees() {
-        for (const key of Object.keys(enums_1.TransactionTypes)) {
-            fee_1.feeManager.set(enums_1.TransactionTypes[key], this.getMilestone().fees.staticFees[lodash_camelcase_1.default(key)]);
         }
     }
 }

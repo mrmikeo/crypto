@@ -12,6 +12,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const bytebuffer_1 = __importDefault(require("bytebuffer"));
 const enums_1 = require("../../enums");
+const bignum_1 = require("../../utils/bignum");
 const schemas = __importStar(require("./schemas"));
 const transaction_1 = require("./transaction");
 class SecondSignatureRegistrationTransaction extends transaction_1.Transaction {
@@ -33,6 +34,9 @@ class SecondSignatureRegistrationTransaction extends transaction_1.Transaction {
         };
     }
 }
-SecondSignatureRegistrationTransaction.type = enums_1.TransactionTypes.SecondSignature;
 exports.SecondSignatureRegistrationTransaction = SecondSignatureRegistrationTransaction;
+SecondSignatureRegistrationTransaction.typeGroup = enums_1.TransactionTypeGroup.Core;
+SecondSignatureRegistrationTransaction.type = enums_1.TransactionType.SecondSignature;
+SecondSignatureRegistrationTransaction.key = "secondSignature";
+SecondSignatureRegistrationTransaction.defaultStaticFee = bignum_1.BigNumber.make("500000000");
 //# sourceMappingURL=second-signature.js.map

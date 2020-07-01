@@ -15,14 +15,18 @@ const strictTransaction = {
 exports.transactionBaseSchema = {
     $id: undefined,
     type: "object",
-    required: ["type", "senderPublicKey", "fee", "amount", "timestamp"],
+    if: { properties: { version: { anyOf: [{ type: "null" }, { const: 1 }] } } },
+    then: { required: ["type", "senderPublicKey", "fee", "amount", "timestamp"] },
+    else: { required: ["type", "senderPublicKey", "fee", "amount", "nonce"] },
     properties: {
         id: { anyOf: [{ $ref: "transactionId" }, { type: "null" }] },
         version: { enum: [1, 2] },
         network: { $ref: "networkByte" },
         timestamp: { type: "integer", minimum: 0 },
+        nonce: { bignumber: { minimum: 0 } },
+        typeGroup: { type: "integer", minimum: 0 },
         amount: { bignumber: { minimum: 1, bypassGenesis: true } },
-        fee: { bignumber: { minimum: 1, bypassGenesis: true } },
+        fee: { bignumber: { minimum: 0, bypassGenesis: true } },
         senderPublicKey: { $ref: "publicKey" },
         signature: { $ref: "alphanumeric" },
         secondSignature: { $ref: "alphanumeric" },
@@ -55,9 +59,9 @@ exports.transfer = exports.extend(exports.transactionBaseSchema, {
     $id: "transfer",
     required: ["recipientId"],
     properties: {
-        type: { transactionType: enums_1.TransactionTypes.Transfer },
+        type: { transactionType: enums_1.TransactionType.Transfer },
+        fee: { bignumber: { minimum: 1, bypassGenesis: true } },
         vendorField: { anyOf: [{ type: "null" }, { type: "string", format: "vendorField" }] },
-        vendorFieldHex: { anyOf: [{ type: "null" }, { type: "string", format: "vendorFieldHex" }] },
         recipientId: { $ref: "address" },
         expiration: { type: "integer", minimum: 0 },
     },
@@ -66,8 +70,9 @@ exports.secondSignature = exports.extend(exports.transactionBaseSchema, {
     $id: "secondSignature",
     required: ["asset"],
     properties: {
-        type: { transactionType: enums_1.TransactionTypes.SecondSignature },
+        type: { transactionType: enums_1.TransactionType.SecondSignature },
         amount: { bignumber: { minimum: 0, maximum: 0 } },
+        fee: { bignumber: { minimum: 1 } },
         secondSignature: { type: "null" },
         asset: {
             type: "object",
@@ -90,8 +95,9 @@ exports.delegateRegistration = exports.extend(exports.transactionBaseSchema, {
     $id: "delegateRegistration",
     required: ["asset"],
     properties: {
-        type: { transactionType: enums_1.TransactionTypes.DelegateRegistration },
+        type: { transactionType: enums_1.TransactionType.DelegateRegistration },
         amount: { bignumber: { minimum: 0, maximum: 0 } },
+        fee: { bignumber: { minimum: 1, bypassGenesis: true } },
         asset: {
             type: "object",
             required: ["delegate"],
@@ -111,8 +117,9 @@ exports.vote = exports.extend(exports.transactionBaseSchema, {
     $id: "vote",
     required: ["asset"],
     properties: {
-        type: { transactionType: enums_1.TransactionTypes.Vote },
+        type: { transactionType: enums_1.TransactionType.Vote },
         amount: { bignumber: { minimum: 0, maximum: 0 } },
+        fee: { bignumber: { minimum: 1 } },
         recipientId: { $ref: "address" },
         asset: {
             type: "object",
@@ -133,8 +140,9 @@ exports.multiSignature = exports.extend(exports.transactionBaseSchema, {
     $id: "multiSignature",
     required: ["asset", "signatures"],
     properties: {
-        type: { transactionType: enums_1.TransactionTypes.MultiSignature },
+        type: { transactionType: enums_1.TransactionType.MultiSignature },
         amount: { bignumber: { minimum: 0, maximum: 0 } },
+        fee: { bignumber: { minimum: 1 } },
         asset: {
             type: "object",
             required: ["multiSignature"],
@@ -153,6 +161,7 @@ exports.multiSignature = exports.extend(exports.transactionBaseSchema, {
                             minItems: 1,
                             maxItems: 16,
                             additionalItems: false,
+                            uniqueItems: true,
                             items: { $ref: "publicKey" },
                         },
                     },
@@ -169,11 +178,64 @@ exports.multiSignature = exports.extend(exports.transactionBaseSchema, {
         },
     },
 });
+// Multisignature legacy transactions have a different signatures property.
+// Then we delete the "signatures" property definition to implement our own.
+const transactionBaseSchemaNoSignatures = exports.extend(exports.transactionBaseSchema, {});
+delete transactionBaseSchemaNoSignatures.properties.signatures;
+exports.multiSignatureLegacy = exports.extend(transactionBaseSchemaNoSignatures, {
+    $id: "multiSignatureLegacy",
+    required: ["asset"],
+    properties: {
+        version: { anyOf: [{ type: "null" }, { const: 1 }] },
+        type: { transactionType: enums_1.TransactionType.MultiSignature },
+        amount: { bignumber: { minimum: 0, maximum: 0 } },
+        fee: { bignumber: { minimum: 1 } },
+        asset: {
+            type: "object",
+            required: ["multiSignatureLegacy"],
+            properties: {
+                multiSignatureLegacy: {
+                    type: "object",
+                    required: ["keysgroup", "min", "lifetime"],
+                    properties: {
+                        min: {
+                            type: "integer",
+                            minimum: 1,
+                            maximum: { $data: "1/keysgroup/length" },
+                        },
+                        lifetime: {
+                            type: "integer",
+                            minimum: 1,
+                            maximum: 72,
+                        },
+                        keysgroup: {
+                            type: "array",
+                            minItems: 1,
+                            maxItems: 16,
+                            additionalItems: false,
+                            items: {
+                                allOf: [{ type: "string", minimum: 67, maximum: 67, transform: ["toLowerCase"] }],
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        signatures: {
+            type: "array",
+            minItems: 1,
+            maxItems: 1,
+            additionalItems: false,
+            items: { $ref: "alphanumeric" },
+        },
+    },
+});
 exports.ipfs = exports.extend(exports.transactionBaseSchema, {
     $id: "ipfs",
     properties: {
-        type: { transactionType: enums_1.TransactionTypes.Ipfs },
+        type: { transactionType: enums_1.TransactionType.Ipfs },
         amount: { bignumber: { minimum: 0, maximum: 0 } },
+        fee: { bignumber: { minimum: 1 } },
         asset: {
             type: "object",
             required: ["ipfs"],
@@ -185,25 +247,115 @@ exports.ipfs = exports.extend(exports.transactionBaseSchema, {
         },
     },
 });
-exports.timelockTransfer = exports.extend(exports.transactionBaseSchema, {
-    $id: "timelockTransfer",
+exports.htlcLock = exports.extend(exports.transactionBaseSchema, {
+    $id: "htlcLock",
     properties: {
-        type: { transactionType: enums_1.TransactionTypes.TimelockTransfer },
+        type: { transactionType: enums_1.TransactionType.HtlcLock },
+        amount: { bignumber: { minimum: 1 } },
+        fee: { bignumber: { minimum: 1 } },
+        recipientId: { $ref: "address" },
+        vendorField: { anyOf: [{ type: "null" }, { type: "string", format: "vendorField" }] },
+        asset: {
+            type: "object",
+            required: ["lock"],
+            properties: {
+                lock: {
+                    type: "object",
+                    required: ["secretHash", "expiration"],
+                    properties: {
+                        secretHash: { allOf: [{ minLength: 64, maxLength: 64 }, { $ref: "hex" }] },
+                        expiration: {
+                            type: "object",
+                            required: ["type", "value"],
+                            properties: {
+                                type: { enum: [1, 2] },
+                                value: { type: "integer", minimum: 0 },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+});
+exports.htlcClaim = exports.extend(exports.transactionBaseSchema, {
+    $id: "htlcClaim",
+    properties: {
+        type: { transactionType: enums_1.TransactionType.HtlcClaim },
         amount: { bignumber: { minimum: 0, maximum: 0 } },
+        fee: { bignumber: { minimum: 0, maximum: 0 } },
+        asset: {
+            type: "object",
+            required: ["claim"],
+            properties: {
+                claim: {
+                    type: "object",
+                    required: ["lockTransactionId", "unlockSecret"],
+                    properties: {
+                        lockTransactionId: { $ref: "transactionId" },
+                        unlockSecret: { allOf: [{ minLength: 64, maxLength: 64 }, { $ref: "hex" }] },
+                    },
+                },
+            },
+        },
+    },
+});
+exports.htlcRefund = exports.extend(exports.transactionBaseSchema, {
+    $id: "htlcRefund",
+    properties: {
+        type: { transactionType: enums_1.TransactionType.HtlcRefund },
+        amount: { bignumber: { minimum: 0, maximum: 0 } },
+        fee: { bignumber: { minimum: 0, maximum: 0 } },
+        asset: {
+            type: "object",
+            required: ["refund"],
+            properties: {
+                refund: {
+                    type: "object",
+                    required: ["lockTransactionId"],
+                    properties: {
+                        lockTransactionId: { $ref: "transactionId" },
+                    },
+                },
+            },
+        },
     },
 });
 exports.multiPayment = exports.extend(exports.transactionBaseSchema, {
     $id: "multiPayment",
     properties: {
-        type: { transactionType: enums_1.TransactionTypes.MultiPayment },
+        type: { transactionType: enums_1.TransactionType.MultiPayment },
         amount: { bignumber: { minimum: 0, maximum: 0 } },
+        fee: { bignumber: { minimum: 1 } },
+        vendorField: { anyOf: [{ type: "null" }, { type: "string", format: "vendorField" }] },
+        asset: {
+            type: "object",
+            required: ["payments"],
+            properties: {
+                payments: {
+                    type: "array",
+                    minItems: 2,
+                    additionalItems: false,
+                    uniqueItems: false,
+                    items: {
+                        type: "object",
+                        required: ["amount", "recipientId"],
+                        properties: {
+                            amount: { bignumber: { minimum: 1 } },
+                            recipientId: { $ref: "address" },
+                        },
+                    },
+                },
+            },
+        },
     },
 });
 exports.delegateResignation = exports.extend(exports.transactionBaseSchema, {
     $id: "delegateResignation",
     properties: {
-        type: { transactionType: enums_1.TransactionTypes.DelegateResignation },
+        type: { transactionType: enums_1.TransactionType.DelegateResignation },
         amount: { bignumber: { minimum: 0, maximum: 0 } },
+        fee: { bignumber: { minimum: 1 } },
     },
 });
 //# sourceMappingURL=schemas.js.map

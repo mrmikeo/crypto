@@ -14,13 +14,12 @@ export declare class ConfigManager {
     get<T = any>(key: string): T;
     setHeight(value: number): void;
     getHeight(): number;
-    isNewMilestone(): boolean;
+    isNewMilestone(height?: number): boolean;
     getMilestone(height?: number): {
         [key: string]: any;
     };
     getMilestones(): any;
     private buildConstants;
     private validateMilestones;
-    private buildFees;
 }
 export declare const configManager: ConfigManager;

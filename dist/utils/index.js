@@ -1,11 +1,38 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+const fast_memoize_1 = __importDefault(require("fast-memoize"));
 const constants_1 = require("../constants");
-const managers_1 = require("../managers");
+const config_1 = require("../managers/config");
+const base58_1 = require("./base58");
+exports.Base58 = base58_1.Base58;
 const bignum_1 = require("./bignum");
 exports.BigNumber = bignum_1.BigNumber;
-let genesisTransactions;
-let currentNetwork;
+const is_valid_peer_1 = require("./is-valid-peer");
+exports.isLocalHost = is_valid_peer_1.isLocalHost;
+exports.isValidPeer = is_valid_peer_1.isValidPeer;
+const getExceptionIds = fast_memoize_1.default(_ => {
+    const s = new Set();
+    const blockIds = config_1.configManager.get("exceptions.blocks") || [];
+    const transactionIds = config_1.configManager.get("exceptions.transactions") || [];
+    for (const blockId of blockIds) {
+        s.add(blockId);
+    }
+    for (const transactionId of transactionIds) {
+        s.add(transactionId);
+    }
+    return s;
+});
+const getGenesisTransactionIds = fast_memoize_1.default(_ => {
+    const s = new Set();
+    const genesisTransactions = config_1.configManager.get("genesisBlock.transactions") || [];
+    for (const transaction of genesisTransactions) {
+        s.add(transaction.id);
+    }
+    return s;
+});
 /**
  * Get human readable string from satoshis
  */
@@ -14,50 +41,32 @@ exports.formatSatoshi = (amount) => {
         minimumFractionDigits: 0,
         maximumFractionDigits: 8,
     });
-    return `${localeString} ${managers_1.configManager.get("network.client.symbol")}`;
+    return `${localeString} ${config_1.configManager.get("network.client.symbol")}`;
 };
 /**
  * Check if the given block or transaction id is an exception.
  */
 exports.isException = (blockOrTransaction) => {
-    return ["blocks", "transactions"].some(key => {
-        const exceptions = managers_1.configManager.get(`exceptions.${key}`);
-        return Array.isArray(exceptions) && exceptions.includes(blockOrTransaction.id);
-    });
-};
-/**
- * Sort transactions by type, then id.
- */
-exports.sortTransactions = (transactions) => {
-    return transactions.sort((a, b) => {
-        if (a.type < b.type) {
-            return -1;
-        }
-        if (a.type > b.type) {
-            return 1;
-        }
-        if (a.id < b.id) {
-            return -1;
-        }
-        if (a.id > b.id) {
-            return 1;
-        }
-        return 0;
-    });
+    const network = config_1.configManager.get("network");
+    return getExceptionIds(network).has(blockOrTransaction.id);
 };
 exports.isGenesisTransaction = (id) => {
-    const network = managers_1.configManager.get("network.pubKeyHash");
-    if (!genesisTransactions || currentNetwork !== network) {
-        currentNetwork = network;
-        genesisTransactions = managers_1.configManager
-            .get("genesisBlock.transactions")
-            .reduce((acc, curr) => Object.assign(acc, { [curr.id]: true }), {});
-    }
-    return genesisTransactions[id];
+    const network = config_1.configManager.get("network");
+    return getGenesisTransactionIds(network).has(id);
 };
 exports.numberToHex = (num, padding = 2) => {
     const indexHex = Number(num).toString(16);
     return "0".repeat(padding - indexHex.length) + indexHex;
 };
-exports.maxVendorFieldLength = (height) => managers_1.configManager.getMilestone(height).vendorFieldLength;
+exports.maxVendorFieldLength = (height) => config_1.configManager.getMilestone(height).vendorFieldLength;
+exports.isSupportedTransactionVersion = (version) => {
+    const aip11 = config_1.configManager.getMilestone().aip11;
+    if (aip11 && version !== 2) {
+        return false;
+    }
+    if (!aip11 && version !== 1) {
+        return false;
+    }
+    return true;
+};
 //# sourceMappingURL=index.js.map

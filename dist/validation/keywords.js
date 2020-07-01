@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const ajv_keywords_1 = __importDefault(require("ajv-keywords"));
-const address_1 = require("../identities/address");
+const enums_1 = require("../enums");
 const managers_1 = require("../managers");
 const utils_1 = require("../utils");
 const maxBytes = (ajv) => {
@@ -28,7 +28,16 @@ const maxBytes = (ajv) => {
 const transactionType = (ajv) => {
     ajv.addKeyword("transactionType", {
         compile(schema) {
-            return data => {
+            return (data, dataPath, parentObject) => {
+                // Impose dynamic multipayment limit based on milestone
+                if (data === enums_1.TransactionType.MultiPayment &&
+                    parentObject &&
+                    (!parentObject.typeGroup || parentObject.typeGroup === 1)) {
+                    if (parentObject.asset && parentObject.asset.payments) {
+                        const limit = managers_1.configManager.getMilestone().multiPaymentLimit || 500;
+                        return parentObject.asset.payments.length <= limit;
+                    }
+                }
                 return data === schema;
             };
         },
@@ -60,9 +69,18 @@ const bignumber = (ajv) => {
             return (data, dataPath, parentObject, property) => {
                 const minimum = typeof schema.minimum !== "undefined" ? schema.minimum : 0;
                 const maximum = typeof schema.maximum !== "undefined" ? schema.maximum : "9223372036854775807"; // 8 byte maximum
-                const bignum = utils_1.BigNumber.make(data);
-                if (!bignum.isInteger()) {
+                if (data !== 0 && !data) {
                     return false;
+                }
+                let bignum;
+                try {
+                    bignum = utils_1.BigNumber.make(data);
+                }
+                catch (_a) {
+                    return false;
+                }
+                if (parentObject && property) {
+                    parentObject[property] = bignum;
                 }
                 let bypassGenesis = false;
                 if (schema.bypassGenesis) {
@@ -80,9 +98,6 @@ const bignumber = (ajv) => {
                 }
                 if (bignum.isGreaterThan(maximum) && !bypassGenesis) {
                     return false;
-                }
-                if (parentObject && property) {
-                    parentObject[property] = bignum;
                 }
                 return true;
             };
@@ -134,18 +149,5 @@ const blockId = (ajv) => {
         },
     });
 };
-const addressOnNetwork = (ajv) => {
-    ajv.addKeyword("addressOnNetwork", {
-        compile(schema) {
-            return data => {
-                return schema && address_1.Address.validate(data);
-            };
-        },
-        errors: false,
-        metaSchema: {
-            type: "boolean",
-        },
-    });
-};
-exports.keywords = [bignumber, blockId, maxBytes, network, transactionType, addressOnNetwork];
+exports.keywords = [bignumber, blockId, maxBytes, network, transactionType];
 //# sourceMappingURL=keywords.js.map

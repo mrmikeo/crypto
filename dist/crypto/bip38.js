@@ -10,12 +10,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const assert_1 = __importDefault(require("assert"));
 const bcrypto_1 = require("bcrypto");
 const browserify_aes_1 = __importDefault(require("browserify-aes"));
-const bs58check_1 = __importDefault(require("bs58check"));
 const inplace_1 = __importDefault(require("buffer-xor/inplace"));
 const crypto_1 = __importDefault(require("crypto"));
 const crypto_2 = require("../crypto");
 const errors_1 = require("../errors");
 const identities_1 = require("../identities");
+const base58_1 = require("../utils/base58");
 const SCRYPT_PARAMS = {
     N: 16384,
     r: 8,
@@ -31,10 +31,16 @@ const getAddressPrivate = (privateKey, compressed) => {
     const payload = Buffer.alloc(21);
     payload.writeUInt8(0x00, 0);
     buffer.copy(payload, 1);
-    return bs58check_1.default.encode(payload);
+    return base58_1.Base58.encodeCheck(payload);
 };
 exports.verify = (bip38) => {
-    const decoded = bs58check_1.default.decodeUnsafe(bip38);
+    let decoded;
+    try {
+        decoded = base58_1.Base58.decodeCheck(bip38);
+    }
+    catch (_a) {
+        return false;
+    }
     if (!decoded) {
         return false;
     }
@@ -183,9 +189,9 @@ const decryptRaw = (buffer, passphrase) => {
     };
 };
 exports.encrypt = (privateKey, compressed, passphrase) => {
-    return bs58check_1.default.encode(encryptRaw(privateKey, compressed, passphrase));
+    return base58_1.Base58.encodeCheck(encryptRaw(privateKey, compressed, passphrase));
 };
 exports.decrypt = (bip38, passphrase) => {
-    return decryptRaw(bs58check_1.default.decode(bip38), passphrase);
+    return decryptRaw(base58_1.Base58.decodeCheck(bip38), passphrase);
 };
 //# sourceMappingURL=bip38.js.map

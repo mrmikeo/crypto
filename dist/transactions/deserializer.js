@@ -7,12 +7,11 @@ const bytebuffer_1 = __importDefault(require("bytebuffer"));
 const enums_1 = require("../enums");
 const errors_1 = require("../errors");
 const identities_1 = require("../identities");
-const managers_1 = require("../managers");
 const utils_1 = require("../utils");
 const types_1 = require("./types");
 // Reference: https://github.com/ArkEcosystem/AIPs/blob/master/AIPS/aip-11.md
 class Deserializer {
-    deserialize(serialized) {
+    static deserialize(serialized, options = {}) {
         const data = {};
         const buffer = this.getByteBuffer(serialized);
         this.deserializeCommon(data, buffer);
@@ -21,11 +20,10 @@ class Deserializer {
         // Deserialize type specific parts
         instance.deserialize(buffer);
         this.deserializeSignatures(data, buffer);
-        if (data.version === 1) {
-            this.applyV1Compatibility(data);
-        }
-        else if (data.version === 2 && managers_1.configManager.getMilestone().aip11) {
-            // TODO
+        if (options.acceptLegacyVersion || utils_1.isSupportedTransactionVersion(data.version)) {
+            if (data.version === 1) {
+                this.applyV1Compatibility(data);
+            }
         }
         else {
             throw new errors_1.TransactionVersionError(data.version);
@@ -33,36 +31,52 @@ class Deserializer {
         instance.serialized = buffer.flip().toBuffer();
         return instance;
     }
-    deserializeCommon(transaction, buf) {
+    static deserializeCommon(transaction, buf) {
         buf.skip(1); // Skip 0xFF marker
         transaction.version = buf.readUint8();
         transaction.network = buf.readUint8();
-        transaction.type = buf.readUint8();
-        transaction.timestamp = buf.readUint32();
+        if (transaction.version === 1) {
+            transaction.type = buf.readUint8();
+            transaction.timestamp = buf.readUint32();
+        }
+        else {
+            transaction.typeGroup = buf.readUint32();
+            transaction.type = buf.readUint16();
+            transaction.nonce = utils_1.BigNumber.make(buf.readUint64().toString());
+        }
         transaction.senderPublicKey = buf.readBytes(33).toString("hex");
         transaction.fee = utils_1.BigNumber.make(buf.readUint64().toString());
         transaction.amount = utils_1.BigNumber.ZERO;
     }
-    deserializeVendorField(transaction, buf) {
+    static deserializeVendorField(transaction, buf) {
         const vendorFieldLength = buf.readUint8();
         if (vendorFieldLength > 0) {
             if (transaction.hasVendorField()) {
-                transaction.data.vendorFieldHex = buf.readBytes(vendorFieldLength).toString("hex");
+                const vendorFieldBuffer = buf.readBytes(vendorFieldLength).toBuffer();
+                transaction.data.vendorField = vendorFieldBuffer.toString("utf8");
             }
             else {
                 buf.skip(vendorFieldLength);
             }
         }
     }
-    deserializeSignatures(transaction, buf) {
+    static deserializeSignatures(transaction, buf) {
         if (transaction.version === 1) {
             this.deserializeECDSA(transaction, buf);
         }
-        else if (transaction.version === 2) {
-            this.deserializeSchnorr(transaction, buf);
+        else {
+            this.deserializeSchnorrOrECDSA(transaction, buf);
         }
     }
-    deserializeECDSA(transaction, buf) {
+    static deserializeSchnorrOrECDSA(transaction, buf) {
+        if (this.detectSchnorr(buf)) {
+            this.deserializeSchnorr(transaction, buf);
+        }
+        else {
+            this.deserializeECDSA(transaction, buf);
+        }
+    }
+    static deserializeECDSA(transaction, buf) {
         const currentSignatureLength = () => {
             buf.mark();
             const lengthHex = buf
@@ -95,10 +109,10 @@ class Deserializer {
             transaction.signatures = [multiSignature];
         }
         if (buf.remaining()) {
-            throw new errors_1.MalformedTransactionBytesError();
+            throw new errors_1.InvalidTransactionBytesError("signature buffer not exhausted");
         }
     }
-    deserializeSchnorr(transaction, buf) {
+    static deserializeSchnorr(transaction, buf) {
         const canReadNonMultiSignature = () => {
             return buf.remaining() && (buf.remaining() % 64 === 0 || buf.remaining() % 65 !== 0);
         };
@@ -112,30 +126,52 @@ class Deserializer {
             if (buf.remaining() % 65 === 0) {
                 transaction.signatures = [];
                 const count = buf.remaining() / 65;
+                const publicKeyIndexes = {};
                 for (let i = 0; i < count; i++) {
                     const multiSignaturePart = buf.readBytes(65).toString("hex");
+                    const publicKeyIndex = parseInt(multiSignaturePart.slice(0, 2), 16);
+                    if (!publicKeyIndexes[publicKeyIndex]) {
+                        publicKeyIndexes[publicKeyIndex] = true;
+                    }
+                    else {
+                        throw new errors_1.DuplicateParticipantInMultiSignatureError();
+                    }
                     transaction.signatures.push(multiSignaturePart);
                 }
             }
             else {
-                throw new errors_1.MalformedTransactionBytesError();
+                throw new errors_1.InvalidTransactionBytesError("signature buffer not exhausted");
             }
         }
     }
+    static detectSchnorr(buf) {
+        const remaining = buf.remaining();
+        // `signature` / `secondSignature`
+        if (remaining === 64 || remaining === 128) {
+            return true;
+        }
+        // `signatures` of a multi signature transaction (type != 4)
+        if (remaining % 65 === 0) {
+            return true;
+        }
+        // only possiblity left is a type 4 transaction with and without a `secondSignature`.
+        if ((remaining - 64) % 65 === 0 || (remaining - 128) % 65 === 0) {
+            return true;
+        }
+        return false;
+    }
     // tslint:disable-next-line:member-ordering
-    applyV1Compatibility(transaction) {
+    static applyV1Compatibility(transaction) {
         transaction.secondSignature = transaction.secondSignature || transaction.signSignature;
-        if (transaction.type === enums_1.TransactionTypes.Vote) {
+        transaction.typeGroup = enums_1.TransactionTypeGroup.Core;
+        if (transaction.type === enums_1.TransactionType.Vote) {
             transaction.recipientId = identities_1.Address.fromPublicKey(transaction.senderPublicKey, transaction.network);
         }
-        else if (transaction.type === enums_1.TransactionTypes.MultiSignature) {
+        else if (transaction.type === enums_1.TransactionType.MultiSignature) {
             transaction.asset.multiSignatureLegacy.keysgroup = transaction.asset.multiSignatureLegacy.keysgroup.map(k => k.startsWith("+") ? k : `+${k}`);
         }
-        if (transaction.vendorFieldHex) {
-            transaction.vendorField = Buffer.from(transaction.vendorFieldHex, "hex").toString("utf8");
-        }
     }
-    getByteBuffer(serialized) {
+    static getByteBuffer(serialized) {
         if (!(serialized instanceof Buffer)) {
             serialized = Buffer.from(serialized, "hex");
         }
@@ -145,5 +181,5 @@ class Deserializer {
         return buffer;
     }
 }
-exports.deserializer = new Deserializer();
+exports.Deserializer = Deserializer;
 //# sourceMappingURL=deserializer.js.map
