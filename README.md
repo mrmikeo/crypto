@@ -1,8 +1,6 @@
-# ARK - Crypto
+# Qredit - Crypto
 
-<p align="center">
-    <img src="./banner.png?sanitize=true" />
-</p>
+
 
 ## Documentation
 
